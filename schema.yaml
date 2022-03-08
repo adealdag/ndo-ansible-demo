@@ -1,0 +1,64 @@
+---
+- name: Tenant, schema and templates
+  hosts: ndo
+  connection: httpapi
+  gather_facts: no
+
+  vars:
+    ndo_login: &ndo_login
+      login_domain: "{{ login_domain }}"
+    state: present
+
+  tasks:
+    - name: Create Tenant
+      cisco.mso.mso_tenant:
+        <<: *ndo_login
+        tenant: ndo_ansible_demo
+        display_name: ndo_ansible_demo
+        users: 
+          - "{{ ansible_user }}"
+        sites:
+          - "MDR1"
+          - "MLG1"
+        state: "{{ state }}"
+
+    - name: Add schema and stretched template
+      cisco.mso.mso_schema_template:
+        <<: *ndo_login
+        tenant: ndo_ansible_demo
+        schema: ndo_ansible_demo
+        template: Stretched
+        state: "{{ state }}" 
+    
+    - name: Add local template to schema
+      cisco.mso.mso_schema_template:
+        <<: *ndo_login
+        tenant: ndo_ansible_demo
+        schema: ndo_ansible_demo
+        template: "{{ item }}"
+        state: "{{ state }}" 
+      loop:
+        - MDR1 Only
+        - MLG1 Only
+
+    - name: Add site 1 to schemas
+      cisco.mso.mso_schema_site:
+        <<: *ndo_login
+        schema: ndo_ansible_demo
+        site: MDR1
+        template: "{{ item }}"
+        state: "{{ state }}"
+      loop:
+        - Stretched
+        - MDR1 Only
+
+    - name: Add site 2 to schemas
+      cisco.mso.mso_schema_site:
+        <<: *ndo_login
+        schema: ndo_ansible_demo
+        site: MLG1
+        template: "{{ item }}"
+        state: "{{ state }}"
+      loop:
+        - Stretched
+        - MLG1 Only

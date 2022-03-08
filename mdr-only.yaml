@@ -1,0 +1,103 @@
+---
+- name: Objects in MDR1 Only template
+  hosts: ndo
+  connection: httpapi
+  gather_facts: no
+
+  vars:
+    ndo_login: &ndo_login
+      login_domain: "{{ login_domain }}"
+    state: present
+
+  tasks:
+    - name: Add BD
+      cisco.mso.mso_schema_template_bd:
+        <<: *ndo_login
+        schema: ndo_ansible_demo
+        template: MDR1 Only
+        bd: 192.168.3.0_24_bd
+        vrf:
+          name: main_vrf
+          template: Stretched
+        arp_flooding: yes
+        layer2_stretch: no
+        layer2_unknown_unicast: proxy
+        unicast_routing: yes
+        state: "{{ state }}"
+
+    - name: Configure site BD
+      cisco.mso.mso_schema_site_bd:
+        <<: *ndo_login
+        schema: ndo_ansible_demo
+        template: MDR1 Only
+        site: MDR1
+        bd: 192.168.3.0_24_bd
+        state: "{{ state }}"
+    
+    - name: Add BD Local Subnet
+      cisco.mso.mso_schema_site_bd_subnet:
+        <<: *ndo_login
+        schema: ndo_ansible_demo
+        template: MDR1 Only
+        site: MDR1
+        bd: 192.168.3.0_24_bd
+        subnet: 192.168.3.1/24
+        output_level: debug
+        state: "{{ state }}"
+
+    - name: Add ANP
+      cisco.mso.mso_schema_template_anp:
+        <<: *ndo_login
+        schema: ndo_ansible_demo
+        template: MDR1 Only
+        anp: demo_app
+        state: "{{ state }}"
+
+    - name: Add Database EPG
+      cisco.mso.mso_schema_template_anp_epg:
+        <<: *ndo_login
+        schema: ndo_ansible_demo
+        template: MDR1 Only
+        anp: demo_app
+        epg: database_epg
+        preferred_group: yes
+        bd:
+          name: 192.168.3.0_24_bd
+        state: "{{ state }}"
+
+    - name: Add VMM Domain to EPGs in site 1
+      cisco.mso.mso_schema_site_anp_epg_domain:
+        <<: *ndo_login
+        schema: ndo_ansible_demo
+        template: MDR1 Only
+        site: MDR1
+        anp: demo_app
+        epg: database_epg
+        domain_association_type: vmmDomain
+        domain_profile: vmm_vds
+        deployment_immediacy: lazy
+        resolution_immediacy: pre-provision
+        state: "{{ state }}"
+
+    - name: Query deployment plan
+      cisco.mso.mso_schema_template_deploy_status:
+        <<: *ndo_login
+        schema: ndo_ansible_demo
+        template: MDR1 Only
+        state: query
+      register: deploy_status
+
+    - name: Save deployment plan to a file
+      ansible.builtin.copy:
+        content: "{{ deploy_status.current | to_nice_json }}"
+        dest: plans/mdr1-deployment-plan.json
+
+    - name: Deploy template
+      cisco.mso.mso_schema_template_deploy:
+        <<: *ndo_login
+        schema: ndo_ansible_demo
+        template: MDR1 Only
+        site: MDR1
+        state: "{{ deployment_state }}"
+
+      

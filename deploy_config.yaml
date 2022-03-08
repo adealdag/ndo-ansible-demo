@@ -1,0 +1,23 @@
+---
+# Run all individual playbooks to deploy config in NDO
+
+- name: Configure Tenant, Schemas and templates
+  import_playbook: schema.yaml
+
+- name: Configure Stretched Template
+  import_playbook: stretched.yaml
+  vars:
+    # deployment_state can be deploy|undeploy|status
+    deployment_state: undeploy 
+
+- name: Configure MDR1 Only Template
+  import_playbook: mdr-only.yaml
+  vars:
+    # deployment_state can be deploy|undeploy|status
+    deployment_state: undeploy 
+
+- name: Configure MLG1 Only Template
+  import_playbook: mlg-only.yaml
+  vars:
+    # deployment_state can be deploy|undeploy|status
+    deployment_state: undeploy

@@ -1,0 +1,38 @@
+---
+- name: Objects in MLG1 Only template
+  hosts: ndo
+  connection: httpapi
+  gather_facts: no
+
+  vars:
+    ndo_login: &ndo_login
+      login_domain: "{{ login_domain }}"
+    state: present
+
+  tasks:
+    - name: Query deployment plan
+      cisco.mso.mso_schema_template_deploy_status:
+        <<: *ndo_login
+        schema: ndo_ansible_demo
+        template: MLG1 Only
+        state: query
+      register: deploy_status
+
+    - name: Save deployment plan to a file
+      ansible.builtin.copy:
+        content: "{{ deploy_status.current | to_nice_json }}"
+        dest: plans/mlg1-deployment-plan.json
+
+    - name: Deploy template
+      cisco.mso.mso_schema_template_deploy:
+        <<: *ndo_login
+        schema: ndo_ansible_demo
+        template: MLG1 Only
+        site: MLG1
+        state: "{{ deployment_state }}"
+
+
+    
+
+
+    
